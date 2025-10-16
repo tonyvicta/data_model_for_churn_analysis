@@ -107,7 +107,7 @@ group by r.customer_id, r.total_revenue, c.churn_reason
 ## High Value Customers Definition and Model
 
 **Definition**  
-Highest value customers are defined as the top revenue decile over the last 12 months. This threshold is configurable. We compute twelve month revenue per customer and keep only the top decile for churn insights.
+High value customers are the top ten percent by total revenue in the last twelve months.
 
 ```sql
 -- models/marts/high_value_churn.sql
