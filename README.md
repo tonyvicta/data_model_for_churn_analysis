@@ -104,6 +104,45 @@ group by r.customer_id, r.total_revenue, c.churn_reason
 
 ---
 
+## High Value Customers Definition and Model
+
+**Definition**  
+Highest value customers are defined as the top revenue decile over the last 12 months. This threshold is configurable. We compute twelve month revenue per customer and keep only the top decile for churn insights.
+
+```sql
+-- models/marts/high_value_churn.sql
+with revenue_12m as (
+  select
+    customer_id,
+    sum(revenue) as revenue_12m
+  from {{ source('salesforce', 'revenue') }}
+  where created_at >= dateadd(month, -12, current_date)
+  group by customer_id
+),
+ranked as (
+  select
+    customer_id,
+    revenue_12m,
+    ntile(10) over (order by revenue_12m desc) as decile
+  from revenue_12m
+),
+churn as (
+  select * from {{ ref('stg_churn_reasons') }}
+)
+select
+  r.customer_id,
+  r.revenue_12m,
+  c.churn_reason,
+  count(*) as churn_count
+from ranked r
+left join churn c using (customer_id)
+where r.decile = 1
+group by r.customer_id, r.revenue_12m, c.churn_reason
+order by churn_count desc
+```
+
+---
+
 ## Data Ingestion from API
 
 * **Fetching Churn Reasons:**
@@ -124,6 +163,20 @@ churn_df = pd.DataFrame(churn_data)
 engine = create_engine('snowflake://user:password@account/db/schema')
 churn_df.to_sql('churn_reasons', con=engine, if_exists='replace', index=False)
 ```
+
+---
+
+## Assumed Tools and AWS Integration
+
+**Core tools**  
+Python for API ingestion and utilities.  
+dbt Core for transformations and modeling.  
+Snowflake as the data warehouse and query engine.
+
+**AWS usage**  
+S3 as a raw landing bucket or external stage for API files before Snowflake.  
+Lambda to run the API ingestion and write to S3 or Snowflake.  
+EventBridge to schedule the Lambda on a reliable cadence and to emit alerts to SNS or email on failure.
 
 ---
 
