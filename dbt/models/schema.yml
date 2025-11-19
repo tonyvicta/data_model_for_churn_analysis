@@ -1,0 +1,17 @@
+version: 2
+sources:
+  - name: salesforce
+    tables: [ { name: revenue } ]
+  - name: api
+    tables: [ { name: churn_reasons } ]
+models:
+  - name: stg_salesforce_revenue
+    columns:
+      - name: customer_id
+        tests: [not_null]
+  - name: stg_churn_reasons
+    columns:
+      - name: customer_id
+        tests: [not_null]
+      - name: churn_date
+        tests: [not_null]
